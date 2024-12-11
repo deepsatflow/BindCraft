@@ -1059,28 +1059,59 @@ def bindcraft(
         for out_file in Path(out_dir).glob("**/*.*")
     ]
 
-@app.function(secrets=[modal.Secret.from_name("aws-secret-bindcraft")])
-def upload_to_s3_bucket(outputs, out_dir):
-    
+@app.function(
+    secrets=[modal.Secret.from_name("aws-secret-bindcraft")],
+    volumes={"/data": modal.Volume.from_name("bindcraft-volume")}
+)
+def process_and_upload(
+    outputs,
+    out_dir: str,
+    today: str,
+):
     import boto3
+    import logging
+    from pathlib import Path
+    
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+    
     s3_client = boto3.client('s3')
     bucket_name = "bindcraft"
+    results = []
 
-    for out_file, out_content in outputs:
-        local_path = Path(out_dir) / Path(out_file)
-        local_path.parent.mkdir(parents=True, exist_ok=True)
-        if out_content:
-            # Write to local file
-            with open(local_path, "wb") as out:
-                out.write(out_content)
+    try:
+        for out_file, out_content in outputs:
+            if not out_content:
+                continue
 
-            # Upload to S3 using upload_file()
-            s3_key = str(Path(out_file))  # Maintain original folder structure
-            s3_client.upload_file(
-                Filename=str(local_path),
-                Bucket=bucket_name,
-                Key=s3_key,
-            )
+            # Use Modal volume for temporary storage
+            temp_path = Path("/data") / out_file
+            temp_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Write to temp storage
+            try:
+                with open(temp_path, "wb") as f:
+                    f.write(out_content)
+                
+                # Upload to S3
+                s3_key = f"{today}/{out_file}"
+                s3_client.upload_file(
+                    Filename=str(temp_path),
+                    Bucket=bucket_name,
+                    Key=s3_key
+                )
+                logger.info(f"Successfully uploaded {out_file} to S3")
+                results.append((str(out_file), True))
+                
+            except Exception as e:
+                logger.error(f"Error processing {out_file}: {str(e)}")
+                results.append((str(out_file), False))
+                
+    except Exception as e:
+        logger.error(f"Fatal error in process_and_upload: {str(e)}")
+        raise
+
+    return results
 
 @app.local_entrypoint()
 def main(
@@ -1093,18 +1124,24 @@ def main(
     out_dir: str = "./out/bindcraft",
 ):
     """
-    target_hotspot_residues: What positions to target in your protein of interest? For example 1,2-10 or chain specific A1-10,B1-20 or entire chains A. If left blank, an appropriate site will be selected by the pipeline.
+    target_hotspot_residues: What positions to target in your protein of interest? 
+    For example 1,2-10 or chain specific A1-10,B1-20 or entire chains A.
     """
     from datetime import datetime
-    import boto3
-
+    
     today = datetime.now().strftime("%Y%m%d%H%M")[2:]
-
-    pdb_str = open(input_pdb).read()
+    
+    try:
+        with open(input_pdb) as f:
+            pdb_str = f.read()
+    except FileNotFoundError:
+        raise ValueError(f"Input PDB file not found: {input_pdb}")
+        
     binder_name = binder_name or Path(input_pdb).stem
     design_path = f"/tmp/BindCraft/{binder_name}/"
     lengths = [int(i) for i in lengths.split(",")]
 
+    # Run bindcraft remotely
     outputs = bindcraft.remote(
         design_path=design_path,
         binder_name=binder_name,
@@ -1115,12 +1152,10 @@ def main(
         number_of_final_designs=number_of_final_designs,
     )
 
-    for out_file, out_content in outputs:
-        (Path(out_dir) / today / Path(out_file)).parent.mkdir(
-            parents=True, exist_ok=True
-        )
-        if out_content:
-            with open((Path(out_dir) / today / Path(out_file)), "wb") as out:
-                out.write(out_content)
-
-    upload_to_s3_bucket.remote(outputs, out_dir)    
+    # Process and upload results
+    results = process_and_upload.remote(outputs, out_dir, today)
+    
+    # Log results
+    for file_path, success in results:
+        status = "Success" if success else "Failed"
+        print(f"{status}: {file_path}")
