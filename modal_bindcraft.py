@@ -10,6 +10,7 @@ Approximate cost for 3 designs, PDL1.pdb only:
 
 import os
 from pathlib import Path
+import modal 
 
 from modal import App, Image
 import json 
@@ -1058,6 +1059,28 @@ def bindcraft(
         for out_file in Path(out_dir).glob("**/*.*")
     ]
 
+@app.function(secrets=[modal.Secret.from_name("aws-secret-bindcraft")])
+def upload_to_s3_bucket(outputs, out_dir):
+    
+    import boto3
+    s3_client = boto3.client('s3')
+    bucket_name = "bindcraft"
+
+    for out_file, out_content in outputs:
+        local_path = Path(out_dir) / Path(out_file)
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        if out_content:
+            # Write to local file
+            with open(local_path, "wb") as out:
+                out.write(out_content)
+
+            # Upload to S3 using upload_file()
+            s3_key = str(Path(out_file))  # Maintain original folder structure
+            s3_client.upload_file(
+                Filename=str(local_path),
+                Bucket=bucket_name,
+                Key=s3_key,
+            )
 
 @app.local_entrypoint()
 def main(
@@ -1082,21 +1105,6 @@ def main(
     design_path = f"/tmp/BindCraft/{binder_name}/"
     lengths = [int(i) for i in lengths.split(",")]
 
-    config_data = json.load(open('config.json'))
-    # aws_access_key_id = config_data['aws_access_key_id']
-    # aws_secret_access_key = config_data['aws_secret_access_key']
-    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key)
-    bucket_name = "bindcraft"
-
-    # s3_key = "pipeline.png"
-    # local_file_path = "pipeline.png"
-
-    # try: 
-    #     response = s3_client.upload_file(local_file_path, bucket_name, s3_key)
-    #     print(f"file upload successful: {bucket_name}")
-    # except Exception as e:
-    #     print(f"file upload failed: {e}")
-
     outputs = bindcraft.remote(
         design_path=design_path,
         binder_name=binder_name,
@@ -1107,26 +1115,12 @@ def main(
         number_of_final_designs=number_of_final_designs,
     )
 
+    upload_to_s3_bucket.remote(outputs, out_dir)    
+
     for out_file, out_content in outputs:
-        local_path = Path(out_dir) / Path(out_file)
-        local_path.parent.mkdir(parents=True, exist_ok=True)
+        (Path(out_dir) / today / Path(out_file)).parent.mkdir(
+            parents=True, exist_ok=True
+        )
         if out_content:
-            # Write to local file
-            with open(local_path, "wb") as out:
+            with open((Path(out_dir) / today / Path(out_file)), "wb") as out:
                 out.write(out_content)
-
-            # Upload to S3 using upload_file()
-            s3_key = str(Path(out_file))  # Maintain original folder structure
-            s3_client.upload_file(
-                Filename=str(local_path),
-                Bucket=bucket_name,
-                Key=s3_key,
-            )
-
-    # for out_file, out_content in outputs:
-    #     (Path(out_dir) / today / Path(out_file)).parent.mkdir(
-    #         parents=True, exist_ok=True
-    #     )
-    #     if out_content:
-    #         with open((Path(out_dir) / today / Path(out_file)), "wb") as out:
-    #             out.write(out_content)
