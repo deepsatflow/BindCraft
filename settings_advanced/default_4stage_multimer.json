@@ -54,7 +54,7 @@
     "zip_animations": false,
     "zip_plots": true,
     "save_trajectory_pickle": false,
-    "max_trajectories": false,
+    "max_trajectories": 1,
     "enable_rejection_check": true,
     "acceptance_rate": 0.01,
     "start_monitoring": 200,

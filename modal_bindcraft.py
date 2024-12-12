@@ -1059,7 +1059,9 @@ def bindcraft(
         for out_file in Path(out_dir).glob("**/*.*")
     ]
 
-@app.function()
+@app.function(
+        timeout= TIMEOUT * 60 
+)
 def create_dummy_outputs(out_dir: str = "/tmp/BindCraft/test/"):
     from pathlib import Path
     import time 
@@ -1071,7 +1073,7 @@ def create_dummy_outputs(out_dir: str = "/tmp/BindCraft/test/"):
         ("plots/trajectory.png", b"dummy_image_bytes"),
         ("plots/rmsd.png", b"dummy_plot_bytes")
     ]
-    # time.sleep(5 * 60)  # Simulate processing time
+    time.sleep(5 * 60)  # Simulate processing time
     # Convert to expected format
     return [
         (Path(file_path), content)
@@ -1132,6 +1134,44 @@ def process_and_upload(
 
     return results
 
+@app.function(
+    image=image, gpu=GPU, timeout=TIMEOUT * 60, 
+    secrets=[modal.Secret.from_name("aws-secret-bindcraft")],
+    volumes={"/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)}, 
+)
+def run_full_pipeline(
+    design_path: str,
+    binder_name: str,
+    pdb_str: str,
+    chains: str,
+    target_hotspot_residues: str,
+    lengths: str,
+    number_of_final_designs: int,
+    out_dir: str,
+    today: str
+):  
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # First run bindcraft
+    # outputs = bindcraft.remote(
+    #     design_path=design_path,
+    #     binder_name=binder_name,
+    #     pdb_str=pdb_str,
+    #     chains=chains,
+    #     target_hotspot_residues=target_hotspot_residues,
+    #     lengths=lengths,
+    #     number_of_final_designs=number_of_final_designs,
+    # )
+
+    outputs = create_dummy_outputs.remote(out_dir)
+    
+    logger.info("Bindcraft completed, starting upload...")
+    
+    # Then process and upload results
+    results = process_and_upload.remote(outputs, out_dir, today)
+    return results
+
 @app.local_entrypoint()
 def main(
     input_pdb: str,
@@ -1147,35 +1187,36 @@ def main(
     For example 1,2-10 or chain specific A1-10,B1-20 or entire chains A.
     """
     from datetime import datetime
-    
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    logger.info("Starting pipeline...")
     today = datetime.now().strftime("%Y%m%d%H%M")[2:]
     
-    try:
-        with open(input_pdb) as f:
-            pdb_str = f.read()
-    except FileNotFoundError:
-        raise ValueError(f"Input PDB file not found: {input_pdb}")
-        
-    binder_name = binder_name or Path(input_pdb).stem
-    design_path = f"/tmp/BindCraft/{binder_name}/"
-    lengths = [int(i) for i in lengths.split(",")]
+    try: 
+        try:
+            with open(input_pdb) as f:
+                pdb_str = f.read()
+        except FileNotFoundError:
+            raise ValueError(f"Input PDB file not found: {input_pdb}")
+            
+        binder_name = binder_name or Path(input_pdb).stem
+        design_path = f"/tmp/BindCraft/{binder_name}/"
+        lengths = [int(i) for i in lengths.split(",")]
 
-    # Run bindcraft remotely
-    outputs = bindcraft.remote(
-        design_path=design_path,
-        binder_name=binder_name,
-        pdb_str=pdb_str,
-        chains=chains,
-        target_hotspot_residues=target_hotspot_residues,
-        lengths=lengths,
-        number_of_final_designs=number_of_final_designs,
-    )
-    # outputs = create_dummy_outputs.remote() # For testing
-
-    # Process and upload results
-    results = process_and_upload.remote(outputs, out_dir, today)
-    
-    # Log results
-    for file_path, success in results:
-        status = "Success" if success else "Failed"
-        print(f"{status}: {file_path}")
+        # Call combined pipeline function
+        future = run_full_pipeline.remote(
+            design_path=design_path,
+            binder_name=binder_name,
+            pdb_str=pdb_str,
+            chains=chains,
+            target_hotspot_residues=target_hotspot_residues,
+            lengths=lengths,
+            number_of_final_designs=number_of_final_designs,
+            out_dir=out_dir,
+            today=today
+        )        
+    except Exception as e:
+        print(f"Pipeline failed: {e}")
+        raise
