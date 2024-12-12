@@ -29,7 +29,7 @@ def set_up_pyrosetta():
 
 
 image = (
-    Image.debian_slim()
+    Image.debian_slim(force_build=True)
     .apt_install("git", "wget", "aria2", "ffmpeg")
     .pip_install(
         "pdb-tools==2.4.8", "ffmpeg-python==0.2.0", "plotly==5.18.0", "kaleido==0.2.1"
@@ -1060,34 +1060,12 @@ def bindcraft(
     ]
 
 @app.function(
-        timeout= TIMEOUT * 60 
-)
-def create_dummy_outputs(out_dir: str = "/tmp/BindCraft/test/"):
-    from pathlib import Path
-    import time 
-    
-    # Create dummy data
-    dummy_files = [
-        ("results/design1.pdb", b"ATOM      1  N   ALA A   1      27.340  24.430   2.614"),
-        ("results/scores.csv", b"design,score\ndesign1,-45.2\ndesign2,-42.1"),
-        ("plots/trajectory.png", b"dummy_image_bytes"),
-        ("plots/rmsd.png", b"dummy_plot_bytes")
-    ]
-    time.sleep(5 * 60)  # Simulate processing time
-    # Convert to expected format
-    return [
-        (Path(file_path), content)
-        for file_path, content in dummy_files
-    ]
-
-@app.function(
     secrets=[modal.Secret.from_name("aws-secret-bindcraft")],
     volumes={"/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)}, 
     timeout=TIMEOUT * 60
 )
 def process_and_upload(
     outputs,
-    out_dir: str,
     today: str,
 ):
     import boto3
@@ -1147,7 +1125,6 @@ def run_full_pipeline(
     target_hotspot_residues: str,
     lengths: str,
     number_of_final_designs: int,
-    out_dir: str,
     today: str
 ):  
     import logging
@@ -1163,13 +1140,9 @@ def run_full_pipeline(
         lengths=lengths,
         number_of_final_designs=number_of_final_designs,
     )
-
-    # outputs = create_dummy_outputs.remote(out_dir)
-    
     logger.info("Bindcraft completed, starting upload...")
-    
     # Then process and upload results
-    results = process_and_upload.remote(outputs, out_dir, today)
+    results = process_and_upload.remote(outputs, today)
     return results
 
 @app.local_entrypoint()
