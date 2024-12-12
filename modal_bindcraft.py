@@ -1154,17 +1154,17 @@ def run_full_pipeline(
     logger = logging.getLogger(__name__)
     
     # First run bindcraft
-    # outputs = bindcraft.remote(
-    #     design_path=design_path,
-    #     binder_name=binder_name,
-    #     pdb_str=pdb_str,
-    #     chains=chains,
-    #     target_hotspot_residues=target_hotspot_residues,
-    #     lengths=lengths,
-    #     number_of_final_designs=number_of_final_designs,
-    # )
+    outputs = bindcraft.remote(
+        design_path=design_path,
+        binder_name=binder_name,
+        pdb_str=pdb_str,
+        chains=chains,
+        target_hotspot_residues=target_hotspot_residues,
+        lengths=lengths,
+        number_of_final_designs=number_of_final_designs,
+    )
 
-    outputs = create_dummy_outputs.remote(out_dir)
+    # outputs = create_dummy_outputs.remote(out_dir)
     
     logger.info("Bindcraft completed, starting upload...")
     
