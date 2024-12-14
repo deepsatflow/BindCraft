@@ -10,10 +10,10 @@ Approximate cost for 3 designs, PDL1.pdb only:
 
 import os
 from pathlib import Path
-import modal 
+import modal
 
 from modal import App, Image
-import json 
+import json
 
 GPU = os.environ.get("GPU", "A10G")
 TIMEOUT = int(os.environ.get("TIMEOUT", 720))
@@ -40,7 +40,8 @@ image = (
     .run_commands(
         "git clone https://github.com/deepsatflow/BindCraft /root/bindcraft"
         " && chmod +x /root/bindcraft/functions/dssp"
-        " && chmod +x /root/bindcraft/functions/DAlphaBall.gcc"
+        " && chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
+        force_build=True,
     )
     .run_commands(
         "ln -s /usr/local/lib/python3.*/dist-packages/colabdesign colabdesign && mkdir /params"
@@ -1059,10 +1060,13 @@ def bindcraft(
         for out_file in Path(out_dir).glob("**/*.*")
     ]
 
+
 @app.function(
     secrets=[modal.Secret.from_name("aws-secret-bindcraft")],
-    volumes={"/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)}, 
-    timeout=TIMEOUT * 60
+    volumes={
+        "/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)
+    },
+    timeout=TIMEOUT * 60,
 )
 def process_and_upload(
     outputs,
@@ -1071,11 +1075,11 @@ def process_and_upload(
     import boto3
     import logging
     from pathlib import Path
-    
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
-    
-    s3_client = boto3.client('s3')
+
+    s3_client = boto3.client("s3")
     bucket_name = "bindcraft"
     results = []
 
@@ -1086,36 +1090,38 @@ def process_and_upload(
             # Use Modal volume for temporary storage
             temp_path = Path("/data") / out_file
             temp_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
             # Write to temp storage
             try:
                 with open(temp_path, "wb") as f:
                     f.write(out_content)
-                
+
                 # Upload to S3
                 s3_key = f"{today}/{out_file}"
                 s3_client.upload_file(
-                    Filename=str(temp_path),
-                    Bucket=bucket_name,
-                    Key=s3_key
+                    Filename=str(temp_path), Bucket=bucket_name, Key=s3_key
                 )
                 logger.info(f"Successfully uploaded {out_file} to S3")
                 results.append((str(out_file), True))
-                
+
             except Exception as e:
                 logger.error(f"Error processing {out_file}: {str(e)}")
                 results.append((str(out_file), False))
-                
+
     except Exception as e:
         logger.error(f"Fatal error in process_and_upload: {str(e)}")
         raise
 
     return results
 
+
 @app.function(
-    image=image, timeout=TIMEOUT * 60, 
+    image=image,
+    timeout=TIMEOUT * 60,
     secrets=[modal.Secret.from_name("aws-secret-bindcraft")],
-    volumes={"/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)}, 
+    volumes={
+        "/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)
+    },
 )
 def run_full_pipeline(
     design_path: str,
@@ -1125,11 +1131,12 @@ def run_full_pipeline(
     target_hotspot_residues: str,
     lengths: str,
     number_of_final_designs: int,
-    today: str
-):  
+    today: str,
+):
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     # First run bindcraft
     outputs = bindcraft.remote(
         design_path=design_path,
@@ -1145,6 +1152,7 @@ def run_full_pipeline(
     results = process_and_upload.remote(outputs, today)
     return results
 
+
 @app.local_entrypoint()
 def main(
     input_pdb: str,
@@ -1155,24 +1163,25 @@ def main(
     binder_name: str = None,
 ):
     """
-    target_hotspot_residues: What positions to target in your protein of interest? 
+    target_hotspot_residues: What positions to target in your protein of interest?
     For example 1,2-10 or chain specific A1-10,B1-20 or entire chains A.
     """
     from datetime import datetime
     import logging
+
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
     logger.info("Starting pipeline...")
     today = datetime.now().strftime("%Y%m%d%H%M")[2:]
-    
-    try: 
+
+    try:
         try:
             with open(input_pdb) as f:
                 pdb_str = f.read()
         except FileNotFoundError:
             raise ValueError(f"Input PDB file not found: {input_pdb}")
-            
+
         binder_name = binder_name or Path(input_pdb).stem
         design_path = f"/tmp/BindCraft/{binder_name}/"
         lengths = [int(i) for i in lengths.split(",")]
@@ -1186,8 +1195,8 @@ def main(
             target_hotspot_residues=target_hotspot_residues,
             lengths=lengths,
             number_of_final_designs=number_of_final_designs,
-            today=today
-        )        
+            today=today,
+        )
     except Exception as e:
         print(f"Pipeline failed: {e}")
         raise
