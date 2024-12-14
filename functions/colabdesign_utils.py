@@ -627,6 +627,12 @@ def add_rmsd_loss(self, target_protein, weight=0.3):
             :, residue_constants.atom_order["CA"]
         ]
 
+        # Ensure target_ca has the same shape as traj_ca
+        if target_ca.shape != traj_ca.shape:
+            raise ValueError(
+                f"Incompatible shapes: traj_ca {traj_ca.shape}, target_ca {target_ca.shape}"
+            )
+
         # Calculate RMSD
         diff = traj_ca - target_ca
         rmsd = jnp.sqrt(jnp.mean(jnp.square(diff)))
