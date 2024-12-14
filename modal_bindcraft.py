@@ -29,7 +29,7 @@ def set_up_pyrosetta():
 
 
 image = (
-    Image.debian_slim(force_build=True)
+    Image.debian_slim()
     .apt_install("git", "wget", "aria2", "ffmpeg")
     .pip_install(
         "pdb-tools==2.4.8", "ffmpeg-python==0.2.0", "plotly==5.18.0", "kaleido==0.2.1"
@@ -1113,7 +1113,7 @@ def process_and_upload(
     return results
 
 @app.function(
-    image=image, gpu=GPU, timeout=TIMEOUT * 60, 
+    image=image, timeout=TIMEOUT * 60, 
     secrets=[modal.Secret.from_name("aws-secret-bindcraft")],
     volumes={"/data": modal.Volume.from_name("bindcraft-volume", create_if_missing=True)}, 
 )
@@ -1153,7 +1153,6 @@ def main(
     lengths: str = "40,100",
     number_of_final_designs: int = 1,
     binder_name: str = None,
-    out_dir: str = "./out/bindcraft",
 ):
     """
     target_hotspot_residues: What positions to target in your protein of interest? 
@@ -1187,7 +1186,6 @@ def main(
             target_hotspot_residues=target_hotspot_residues,
             lengths=lengths,
             number_of_final_designs=number_of_final_designs,
-            out_dir=out_dir,
             today=today
         )        
     except Exception as e:
