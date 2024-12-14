@@ -24,7 +24,7 @@
     "inter_contact_distance": 20.0,
     "intra_contact_number": 2,
     "inter_contact_number": 1,
-    "weights_helicity": -2.0,
+    "weights_helicity": -0.3,
     "random_helicity": false,
     "use_i_ptm_loss": true,
     "weights_iptm": 0.05,
