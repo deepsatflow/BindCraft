@@ -2,3 +2,4 @@ rootkey.csv
 config.json
 aws-s3-bindcraft.csv
 target.pdb
+out/bindcraft
