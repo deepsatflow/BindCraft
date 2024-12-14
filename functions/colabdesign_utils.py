@@ -623,10 +623,7 @@ def add_rmsd_loss(self, target_protein, weight=0.3):
         traj_ca = traj_ca[-self._binder_len :]
 
         # Extract CA atom positions from target protein
-        target_ca = target_protein["final_atom_positions"][
-            :, residue_constants.atom_order["CA"]
-        ]
-
+        target_ca = target_protein["final_atom_positions"]
         # Ensure target_ca has the same shape as traj_ca
         if target_ca.shape != traj_ca.shape:
             raise ValueError(
