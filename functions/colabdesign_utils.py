@@ -111,12 +111,12 @@ def binder_hallucination(
         # add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
         pass
 
-    target_protein = parse_pdb_to_target_protein("/root/bindcraft/target_A.pdb")
-    # add RMSD loss wrt to target
-    add_rmsd_loss(af_model, target_protein=target_protein, weight=0.4)
+    # target_protein = parse_pdb_to_target_protein("/root/bindcraft/target_A.pdb")
+    # # add RMSD loss wrt to target
+    # add_rmsd_loss(af_model, target_protein=target_protein, weight=0.4)
 
     # add the helicity loss
-    # add_helix_loss(af_model, helicity_value)
+    add_helix_loss(af_model, helicity_value)
 
     # calculate the number of mutations to do based on the length of the protein
     greedy_tries = math.ceil(length * (advanced_settings["greedy_percentage"] / 100))
