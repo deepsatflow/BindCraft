@@ -11,7 +11,13 @@ from scipy.special import softmax
 from colabdesign import mk_afdesign_model, clear_mem
 from colabdesign.mpnn import mk_mpnn_model
 from colabdesign.af.alphafold.common import residue_constants
-from colabdesign.af.loss import get_ptm, mask_loss, get_dgram_bins, _get_con_loss
+from colabdesign.af.loss import (
+    get_ptm,
+    mask_loss,
+    get_dgram_bins,
+    _get_con_loss,
+    get_rmsd_loss,
+)
 from colabdesign.shared.utils import copy_dict
 from .biopython_utils import (
     hotspot_residues,
@@ -111,69 +117,17 @@ def binder_hallucination(
         # add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
         pass
 
-    target_protein = parse_pdb_to_target_protein("/root/bindcraft/target_A.pdb")
+    template_protein = parse_pdb_to_target_protein("/root/bindcraft/target_A.pdb")
     # add RMSD loss wrt to target
-    add_rmsd_loss(af_model, target_protein=target_protein, weight=0.8)
+    add_rmsd_loss(af_model, template=template_protein, weight=0.3)
 
     # add the helicity loss
-    add_helix_loss(af_model, helicity_value)
+    # add_helix_loss(af_model, helicity_value)
 
     # calculate the number of mutations to do based on the length of the protein
     greedy_tries = math.ceil(length * (advanced_settings["greedy_percentage"] / 100))
 
-    ### start design algorithm based on selection
-    if advanced_settings["design_algorithm"] == "2stage":
-        # uses gradient descend to get a PSSM profile and then uses PSSM to bias the sampling of random mutations to decrease loss
-        af_model.design_pssm_semigreedy(
-            soft_iters=advanced_settings["soft_iterations"],
-            hard_iters=advanced_settings["greedy_iterations"],
-            tries=greedy_tries,
-            models=design_models,
-            num_models=1,
-            sample_models=advanced_settings["sample_models"],
-            ramp_models=False,
-            save_best=True,
-        )
-
-    elif advanced_settings["design_algorithm"] == "3stage":
-        # 3 stage design using logits, softmax, and one hot encoding
-        af_model.design_3stage(
-            soft_iters=advanced_settings["soft_iterations"],
-            temp_iters=advanced_settings["temporary_iterations"],
-            hard_iters=advanced_settings["hard_iterations"],
-            num_models=1,
-            models=design_models,
-            sample_models=advanced_settings["sample_models"],
-            save_best=True,
-        )
-
-    elif advanced_settings["design_algorithm"] == "greedy":
-        # design by using random mutations that decrease loss
-        af_model.design_semigreedy(
-            advanced_settings["greedy_iterations"],
-            tries=greedy_tries,
-            num_models=1,
-            models=design_models,
-            sample_models=advanced_settings["sample_models"],
-            save_best=True,
-        )
-
-    elif advanced_settings["design_algorithm"] == "mcmc":
-        # design by using random mutations that decrease loss
-        half_life = round(advanced_settings["greedy_iterations"] / 5, 0)
-        t_mcmc = 0.01
-        af_model._design_mcmc(
-            advanced_settings["greedy_iterations"],
-            half_life=half_life,
-            T_init=t_mcmc,
-            mutation_rate=greedy_tries,
-            num_models=1,
-            models=design_models,
-            sample_models=advanced_settings["sample_models"],
-            save_best=True,
-        )
-
-    elif advanced_settings["design_algorithm"] == "4stage":
+    if advanced_settings["design_algorithm"] == "4stage":
         # initial logits to prescreen trajectory
         print("Stage 1: Test Logits")
         af_model.design_logits(
@@ -611,32 +565,15 @@ def get_best_plddt(af_model, length):
 
 
 # Define RMSD loss for colabdesign
-def add_rmsd_loss(self, target_protein, weight=0.3):
-    """add RMSD loss to compare trajectory protein with external target protein"""
+def add_rmsd_loss(self, template, weight=0.3):
+    """add rmsd loss to compare trajectory protein with external target protein"""
 
-    def rmsd_loss_fn(inputs, outputs):
-        # Extract CA atom positions from trajectory protein
-        traj_xyz = outputs["structure_module"]
-        traj_ca = traj_xyz["final_atom_positions"][
-            :, residue_constants.atom_order["CA"]
-        ]
-        traj_ca = traj_ca[-self._binder_len :]
-
-        # Extract CA atom positions from target protein
-        target_ca = target_protein["final_atom_positions"]
-        # Ensure target_ca has the same shape as traj_ca
-        if target_ca.shape != traj_ca.shape:
-            raise ValueError(
-                f"Incompatible shapes: traj_ca {traj_ca.shape}, target_ca {target_ca.shape}"
-            )
-
-        # Calculate RMSD
-        diff = traj_ca - target_ca
-        rmsd = jnp.sqrt(jnp.mean(jnp.square(diff)))
-
+    def loss_rmsd(inputs, template):
+        # rmsd loss
+        rmsd = get_rmsd_loss(inputs, template)
         return {"rmsd": rmsd}
 
-    self._callbacks["model"]["loss"].append(rmsd_loss_fn)
+    self._callbacks["model"]["loss"].append(loss_rmsd)
     self.opt["weights"]["rmsd"] = weight
 
 
