@@ -29,7 +29,7 @@ def set_up_pyrosetta():
 
 
 image = (
-    Image.debian_slim()
+    Image.debian_slim(force_build=True)
     .apt_install("git", "wget", "aria2", "ffmpeg")
     .pip_install(
         "pdb-tools==2.4.8", "ffmpeg-python==0.2.0", "plotly==5.18.0", "kaleido==0.2.1"

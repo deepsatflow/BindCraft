@@ -314,7 +314,7 @@ def parse_pdb_to_target_protein(pdb_file):
     # Convert to numpy array
     ca_positions = np.array(ca_positions)
 
-    # Create target_protein dictionary
-    target_protein = {"final_atom_positions": ca_positions}
+    # Create target_protein dictionary with the same structure as pred
+    target_protein = {"structure_module": {"final_atom_positions": ca_positions}}
 
     return target_protein
