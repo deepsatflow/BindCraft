@@ -568,7 +568,7 @@ def get_best_plddt(af_model, length):
 def add_rmsd_loss(self, template, weight=0.3):
     """add rmsd loss to compare trajectory protein with external target protein"""
     # Extract CA atom positions from target protein
-    template = template["final_atom_positions"]
+    # template = template["final_atom_positions"]
 
     def loss_rmsd(inputs, outputs):
         # rmsd loss
