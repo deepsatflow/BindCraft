@@ -292,29 +292,3 @@ def calculate_percentages(total, helix, sheet):
     )
 
     return helix_percentage, sheet_percentage, loop_percentage
-
-
-## add experimental function
-
-
-def parse_pdb_to_target_protein(pdb_file):
-    parser = PDBParser(QUIET=True)
-    structure = parser.get_structure("target", pdb_file)
-
-    # Initialize list to hold CA atom positions
-    ca_positions = []
-
-    for model in structure:
-        for chain in model:
-            for residue in chain:
-                if "CA" in residue:
-                    ca = residue["CA"]
-                    ca_positions.append(ca.get_coord())
-
-    # Convert to numpy array
-    ca_positions = np.array(ca_positions)
-
-    # Create target_protein dictionary with the same structure as pred
-    target_protein = {"structure_module": {"final_atom_positions": ca_positions}}
-
-    return target_protein

@@ -17,6 +17,8 @@ from colabdesign.af.loss import (
     get_dgram_bins,
     _get_con_loss,
     get_rmsd_loss,
+    get_fape_loss,
+    get_dgram_loss,
 )
 from colabdesign.shared.utils import copy_dict
 from .biopython_utils import (
@@ -28,6 +30,8 @@ from .biopython_utils import (
 )
 from .pyrosetta_utils import pr_relax, align_pdbs
 from .generic_utils import update_failures
+
+from colabdesign.af.prep import prep_pdb
 
 
 # hallucinate a binder
@@ -117,9 +121,8 @@ def binder_hallucination(
         # add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
         pass
 
-    template_protein = parse_pdb_to_target_protein("/root/bindcraft/target_A.pdb")
-    # add RMSD loss wrt to target
-    add_rmsd_loss(af_model, template=template_protein, weight=0.3)
+    template_protein = prepare_inputs_for_loss("/root/bindcraft/target_A.pdb")
+    custom_structure_losses(af_model, custom_inputs=template_protein)
 
     # add the helicity loss
     # add_helix_loss(af_model, helicity_value)
@@ -548,35 +551,21 @@ def get_best_plddt(af_model, length):
 
 
 # Define radius of gyration loss for colabdesign
-# def add_rg_loss(self, weight=0.1):
-#     '''add radius of gyration loss'''
-#     def loss_fn(inputs, outputs):
-#         xyz = outputs["structure_module"]
-#         ca = xyz["final_atom_positions"][:,residue_constants.atom_order["CA"]]
-#         ca = ca[-self._binder_len:]
-#         rg = jnp.sqrt(jnp.square(ca - ca.mean(0)).sum(-1).mean() + 1e-8)
-#         rg_th = 2.38 * ca.shape[0] ** 0.365
+def add_rg_loss(self, weight=0.1):
+    """add radius of gyration loss"""
 
-#         rg = jax.nn.elu(rg - rg_th)
-#         return {"rg":rg}
+    def loss_fn(inputs, outputs):
+        xyz = outputs["structure_module"]
+        ca = xyz["final_atom_positions"][:, residue_constants.atom_order["CA"]]
+        ca = ca[-self._binder_len :]
+        rg = jnp.sqrt(jnp.square(ca - ca.mean(0)).sum(-1).mean() + 1e-8)
+        rg_th = 2.38 * ca.shape[0] ** 0.365
 
-#     self._callbacks["model"]["loss"].append(loss_fn)
-#     self.opt["weights"]["rg"] = weight
+        rg = jax.nn.elu(rg - rg_th)
+        return {"rg": rg}
 
-
-# Define RMSD loss for colabdesign
-def add_rmsd_loss(self, template, weight=0.3):
-    """add rmsd loss to compare trajectory protein with external target protein"""
-    # Extract CA atom positions from target protein
-    # template = template["final_atom_positions"]
-
-    def loss_rmsd(inputs, outputs):
-        # rmsd loss
-        rmsd = get_rmsd_loss(inputs, template)
-        return {"rmsd": rmsd}
-
-    self._callbacks["model"]["loss"].append(loss_rmsd)
-    self.opt["weights"]["rmsd"] = weight
+    self._callbacks["model"]["loss"].append(loss_fn)
+    self.opt["weights"]["rg"] = weight
 
 
 # Define interface pTM loss for colabdesign
@@ -628,31 +617,64 @@ def add_helix_loss(self, weight=0):
 
 
 # add N- and C-terminus distance loss
-# def add_termini_distance_loss(self, weight=0.1, threshold_distance=7.0):
-#     """Add loss penalizing the distance between N and C termini"""
+def add_termini_distance_loss(self, weight=0.1, threshold_distance=7.0):
+    """Add loss penalizing the distance between N and C termini"""
 
-#     def loss_fn(inputs, outputs):
-#         xyz = outputs["structure_module"]
-#         ca = xyz["final_atom_positions"][:, residue_constants.atom_order["CA"]]
-#         ca = ca[-self._binder_len :]  # Considering only the last _binder_len residues
+    def loss_fn(inputs, outputs):
+        xyz = outputs["structure_module"]
+        ca = xyz["final_atom_positions"][:, residue_constants.atom_order["CA"]]
+        ca = ca[-self._binder_len :]  # Considering only the last _binder_len residues
 
-#         # Extract N-terminus (first CA atom) and C-terminus (last CA atom)
-#         n_terminus = ca[0]
-#         c_terminus = ca[-1]
+        # Extract N-terminus (first CA atom) and C-terminus (last CA atom)
+        n_terminus = ca[0]
+        c_terminus = ca[-1]
 
-#         # Compute the distance between N and C termini
-#         termini_distance = jnp.linalg.norm(n_terminus - c_terminus)
+        # Compute the distance between N and C termini
+        termini_distance = jnp.linalg.norm(n_terminus - c_terminus)
 
-#         # Compute the deviation from the threshold distance using ELU activation
-#         deviation = jax.nn.elu(termini_distance - threshold_distance)
+        # Compute the deviation from the threshold distance using ELU activation
+        deviation = jax.nn.elu(termini_distance - threshold_distance)
 
-#         # Ensure the loss is never lower than 0
-#         termini_distance_loss = jax.nn.relu(deviation)
-#         return {"NC": termini_distance_loss}
+        # Ensure the loss is never lower than 0
+        termini_distance_loss = jax.nn.relu(deviation)
+        return {"NC": termini_distance_loss}
 
-#     # Append the loss function to the model callbacks
-#     self._callbacks["model"]["loss"].append(loss_fn)
-#     self.opt["weights"]["NC"] = weight
+    # Append the loss function to the model callbacks
+    self._callbacks["model"]["loss"].append(loss_fn)
+    self.opt["weights"]["NC"] = weight
+
+
+def prepare_inputs_for_loss(pdb_filename, chain=None):
+    """Prepare inputs using existing prep_pdb function"""
+
+    # Get features from prep_pdb
+    features = prep_pdb(pdb_filename=pdb_filename, chain=chain, ignore_missing=False)
+
+    # Prepare inputs dict for loss calculation
+    inputs = {
+        "opt": {"fape_cutoff": 10.0, "con": 1.0, "i_con": 1.0},
+        "aatype": features["aatype"],
+        "residue_index": features["residue_idx"],
+        "atom_positions": features["all_atom_positions"],
+        "atom_mask": features["all_atom_mask"],
+        "seq_mask": np.ones_like(features["aatype"]),
+        "backbone_positions": features["backbone_positions"],
+        "backbone_mask": features["backbone_mask"],
+    }
+
+    return inputs
+
+
+# define other losses
+def custom_structure_losses(self, custom_inputs, weight=0.3):
+    """Calculate losses for custom structure"""
+
+    def loss_fn(inputs, outputs):
+        rmsd_loss = get_rmsd_loss(custom_inputs, outputs)["rmsd"]
+        return {"custom_rmsd": rmsd_loss}
+
+    self._callbacks["model"]["loss"].append(loss_fn)
+    self.opt["weights"]["custom_rmsd"] = weight
 
 
 # plot design trajectory losses
