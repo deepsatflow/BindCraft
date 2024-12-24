@@ -19,6 +19,7 @@ from colabdesign.af.loss import (
     get_rmsd_loss,
     get_fape_loss,
     get_dgram_loss,
+    _get_rmsd_loss,
 )
 from colabdesign.shared.utils import copy_dict
 from .biopython_utils import (
@@ -648,17 +649,6 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
     # Get features from prep_pdb
     features = prep_pdb(pdb_filename=pdb_filename, chain=chain, ignore_missing=False)
     features["seq_mask"] = np.ones_like(features["batch"]["aatype"])
-
-    # Prepare inputs dict for loss calculation
-    # inputs = {
-    #     "opt": {"fape_cutoff": 10.0, "con": 1.0, "i_con": 1.0},
-    #     "aatype": features["batch"]["aatype"],
-    #     "residue_index": features["residue_index"],
-    #     "atom_positions": features["batch"]["all_atom_positions"],
-    #     "atom_mask": features["batch"]["all_atom_mask"],
-    #     "seq_mask": np.ones_like(features["batch"]["aatype"]),
-    # }
-
     return features
 
 
@@ -667,26 +657,11 @@ def custom_structure_losses(self, custom_inputs, weight=0.3):
     """Calculate losses for custom structure"""
 
     def loss_fn(inputs, outputs):
-        # Get sequence length
-        seq_len = outputs["structure_module"]["final_atom_positions"].shape[0]
+        batch = custom_inputs["batch"]
+        true = batch["all_atom_positions"][:, 1]
+        pred = outputs["structure_module"]["final_atom_positions"][:, 1]
 
-        # Ensure masks match the sequence length
-        mask = jnp.ones(seq_len)  # Or your actual mask
-
-        # Get RMSD loss with matched dimensions
-        custom_inputs = {
-            "batch": {
-                "all_atom_positions": outputs["structure_module"][
-                    "final_atom_positions"
-                ],
-                "all_atom_mask": jnp.ones_like(
-                    outputs["structure_module"]["final_atom_mask"]
-                ),
-            },
-            "seq_mask": mask,
-        }
-
-        rmsd_loss = get_rmsd_loss(custom_inputs, outputs, include_L=False)["rmsd"]
+        rmsd_loss = _get_rmsd_loss(true, pred, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
