@@ -667,6 +667,21 @@ def custom_structure_losses(self, custom_inputs, weight=0.3):
     """Calculate losses for custom structure"""
 
     def loss_fn(inputs, outputs):
+        seq_len = outputs["structure_module"]["final_atom_positions"].shape[0]
+        # Ensure masks match the sequence length
+        mask = jnp.ones(seq_len)  # Or your actual mask
+        # Get RMSD loss with matched dimensions
+        custom_inputs = {
+            "batch": {
+                "all_atom_positions": outputs["structure_module"][
+                    "final_atom_positions"
+                ],
+                "all_atom_mask": jnp.ones_like(
+                    outputs["structure_module"]["final_atom_mask"]
+                ),
+            },
+            "seq_mask": mask,
+        }
         rmsd_loss = get_rmsd_loss(custom_inputs, outputs)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
 
