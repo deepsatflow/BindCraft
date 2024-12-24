@@ -49,9 +49,10 @@ image = (
     .pip_install("jax[cuda]")
     .run_commands(
         "cd /root && "
-        "if [ -d bindcraft ]; then "
-        "git clone https://github.com/deepsatflow/BindCraft bindcraft; "
-        "fi && "
+        "git clone https://github.com/deepsatflow/BindCraft temp_bindcraft && "
+        "mv temp_bindcraft/.git && "
+        "cp -r temp_bindcraft/* bindcraft/ 2>/dev/null || true && "
+        "rm -rf temp_bindcraft && "  # Cleanup temp directory
         "chmod +x /root/bindcraft/functions/dssp && "
         "chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
         force_build=True,
