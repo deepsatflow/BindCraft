@@ -26,7 +26,6 @@ from .biopython_utils import (
     calculate_clash_score,
     calc_ss_percentage,
     calculate_percentages,
-    parse_pdb_to_target_protein,
 )
 from .pyrosetta_utils import pr_relax, align_pdbs
 from .generic_utils import update_failures
