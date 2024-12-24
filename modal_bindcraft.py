@@ -50,9 +50,10 @@ image = (
     .run_commands(
         "cd /root && "
         "git clone https://github.com/deepsatflow/BindCraft temp_bindcraft && "
-        "mv temp_bindcraft/.git && "
+        "rm -rf temp_bindcraft/.git && "
+        "rm -rf bindcraft/params && "
         "cp -r temp_bindcraft/* bindcraft/ 2>/dev/null || true && "
-        "rm -rf temp_bindcraft && "  # Cleanup temp directory
+        "rm -rf temp_bindcraft && "
         "chmod +x /root/bindcraft/functions/dssp && "
         "chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
         force_build=True,
