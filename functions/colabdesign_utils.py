@@ -122,7 +122,6 @@ def binder_hallucination(
 
     template_protein = prepare_inputs_for_loss("/root/bindcraft/target_A.pdb")
     custom_structure_losses(af_model, custom_inputs=template_protein)
-
     # add the helicity loss
     # add_helix_loss(af_model, helicity_value)
 
@@ -652,13 +651,11 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
     # Prepare inputs dict for loss calculation
     inputs = {
         "opt": {"fape_cutoff": 10.0, "con": 1.0, "i_con": 1.0},
-        "aatype": features["aatype"],
-        "residue_index": features["residue_idx"],
-        "atom_positions": features["all_atom_positions"],
-        "atom_mask": features["all_atom_mask"],
-        "seq_mask": np.ones_like(features["aatype"]),
-        "backbone_positions": features["backbone_positions"],
-        "backbone_mask": features["backbone_mask"],
+        "aatype": features["batch"]["aatype"],
+        "residue_index": features["residue_index"],
+        "atom_positions": features["batch"]["all_atom_positions"],
+        "atom_mask": features["batch"]["all_atom_mask"],
+        "seq_mask": np.ones_like(features["batch"]["aatype"]),
     }
 
     return inputs
