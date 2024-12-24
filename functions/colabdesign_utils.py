@@ -653,7 +653,7 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
 
 # define other losses
-def custom_structure_losses(self, custom_inputs, weight=0.3):
+def custom_structure_losses(self, custom_inputs, weight=2.0):
     """Calculate losses for custom structure"""
 
     def loss_fn(inputs, outputs):
