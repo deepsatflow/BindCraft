@@ -653,13 +653,13 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
 
 # define other losses
-def custom_structure_losses(self, custom_inputs, weight=2.0):
+def custom_rmsd_loss(self, custom_inputs, weight=2.0):
     """Calculate losses for custom structure"""
 
     def loss_fn(inputs, outputs):
         batch = custom_inputs["batch"]
         true = batch["all_atom_positions"][:, 1]
-        pred = outputs["structure_module"]["final_atom_positions"][:50, 1]
+        pred = outputs["structure_module"]["final_atom_positions"][189:, 1]
 
         rmsd_loss = _get_rmsd_loss(true, pred, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
