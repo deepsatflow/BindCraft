@@ -649,16 +649,16 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
     features = prep_pdb(pdb_filename=pdb_filename, chain=chain, ignore_missing=False)
 
     # Prepare inputs dict for loss calculation
-    inputs = {
-        "opt": {"fape_cutoff": 10.0, "con": 1.0, "i_con": 1.0},
-        "aatype": features["batch"]["aatype"],
-        "residue_index": features["residue_index"],
-        "atom_positions": features["batch"]["all_atom_positions"],
-        "atom_mask": features["batch"]["all_atom_mask"],
-        "seq_mask": np.ones_like(features["batch"]["aatype"]),
-    }
+    # inputs = {
+    #     "opt": {"fape_cutoff": 10.0, "con": 1.0, "i_con": 1.0},
+    #     "aatype": features["batch"]["aatype"],
+    #     "residue_index": features["residue_index"],
+    #     "atom_positions": features["batch"]["all_atom_positions"],
+    #     "atom_mask": features["batch"]["all_atom_mask"],
+    #     "seq_mask": np.ones_like(features["batch"]["aatype"]),
+    # }
 
-    return inputs
+    return features
 
 
 # define other losses
