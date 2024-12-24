@@ -647,6 +647,7 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
     # Get features from prep_pdb
     features = prep_pdb(pdb_filename=pdb_filename, chain=chain, ignore_missing=False)
+    features["seq_mask"] = np.ones_like(features["batch"]["aatype"])
 
     # Prepare inputs dict for loss calculation
     # inputs = {
