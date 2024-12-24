@@ -51,7 +51,7 @@ image = (
         "cd /root && "
         "git clone https://github.com/deepsatflow/BindCraft temp_bindcraft && "
         "rm -rf temp_bindcraft/.git && "
-        "rm -rf bindcraft/params && "
+        "rm -rf temp_bindcraft/params && "
         "cp -r temp_bindcraft/* bindcraft/ 2>/dev/null || true && "
         "rm -rf temp_bindcraft && "
         "chmod +x /root/bindcraft/functions/dssp && "
