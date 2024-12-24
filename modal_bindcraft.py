@@ -38,12 +38,6 @@ image = (
     .pip_install("git+https://github.com/sokrypton/ColabDesign.git")
     .pip_install("pyrosettacolabsetup")
     .run_commands(
-        "git clone https://github.com/deepsatflow/BindCraft /root/bindcraft"
-        " && chmod +x /root/bindcraft/functions/dssp"
-        " && chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
-        force_build=True,
-    )
-    .run_commands(
         "ln -s /usr/local/lib/python3.*/dist-packages/colabdesign colabdesign && mkdir /params"
     )
     .run_commands(
@@ -53,6 +47,12 @@ image = (
     )
     .run_function(set_up_pyrosetta)
     .pip_install("jax[cuda]")
+    .run_commands(
+        "git clone https://github.com/deepsatflow/BindCraft /root/bindcraft"
+        " && chmod +x /root/bindcraft/functions/dssp"
+        " && chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
+        force_build=True,
+    )
 )
 
 
