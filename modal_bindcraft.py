@@ -48,9 +48,14 @@ image = (
     .run_function(set_up_pyrosetta)
     .pip_install("jax[cuda]")
     .run_commands(
-        "git clone https://github.com/deepsatflow/BindCraft /root/bindcraft"
-        " && chmod +x /root/bindcraft/functions/dssp"
-        " && chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
+        "cd /root && "
+        "if [ -d bindcraft ]; then "
+        "cd bindcraft && git pull; "
+        "else "
+        "git clone https://github.com/deepsatflow/BindCraft bindcraft; "
+        "fi && "
+        "chmod +x /root/bindcraft/functions/dssp && "
+        "chmod +x /root/bindcraft/functions/DAlphaBall.gcc",
         force_build=True,
     )
 )
