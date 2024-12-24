@@ -122,7 +122,7 @@ def binder_hallucination(
         pass
 
     template_protein = prepare_inputs_for_loss("/root/bindcraft/target_A.pdb")
-    custom_structure_losses(af_model, custom_inputs=template_protein)
+    custom_rmsd_loss(af_model, custom_inputs=template_protein)
     # add the helicity loss
     # add_helix_loss(af_model, helicity_value)
 
