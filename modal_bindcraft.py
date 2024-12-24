@@ -50,7 +50,7 @@ image = (
     .run_commands(
         "cd /root && "
         "if [ -d bindcraft ]; then "
-        "cd bindcraft && git pull; "
+        "cd bindcraft "
         "else "
         "git clone https://github.com/deepsatflow/BindCraft bindcraft; "
         "fi && "
