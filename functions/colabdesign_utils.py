@@ -654,18 +654,17 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
 
 def extract_traced_array(traced_array):
-    def extract_traced_array(traced_array):
     try:
         import jax
+
         # Method 1: Using device_get
         concrete_array = jax.device_get(traced_array)
-        
+
         # Method 2: Using eval if device_get fails
         if isinstance(traced_array, jax.core.Tracer):
             concrete_array = traced_array.aval.val
-            
+
         return concrete_array
-        
     except Exception as e:
         print(f"Error extracting array: {e}")
         # Fallback: return original array
