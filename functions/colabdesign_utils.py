@@ -699,6 +699,17 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
     self.opt["weights"]["custom_fape"] = weight
 
 
+def custom_dgram_loss(self, custom_inputs, weight=1.0):
+    """Calculate dgram loss for custom structure"""
+
+    def loss_fn(inputs, outputs):
+        dgram_loss = get_dgram_loss(custom_inputs, outputs)
+        return {"custom_dgram": dgram_loss}
+
+    self._callbacks["model"]["loss"].append(loss_fn)
+    self.opt["weights"]["custom_dgram"] = weight
+
+
 # plot design trajectory losses
 def plot_trajectory(af_model, design_name, design_paths):
     metrics_to_plot = [
