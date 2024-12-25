@@ -675,7 +675,7 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         padded_true = jnp.zeros(pred_shape)
         # Copy the smaller matrix into the padded matrix
         padded_true = padded_true.at[: true.shape[0], :].set(true)
-        custom_inputs["batch"]["all_atom_positions"] = padded_true
+        custom_inputs["batch"]["all_atom_positions"][:, 1] = padded_true
 
         tL, bL = self._target_len, self._binder_len
         rmsd_loss = get_rmsd_loss(custom_inputs, outputs, L=bL, include_L=False)["rmsd"]
