@@ -673,7 +673,7 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         print("NaN in padded true:", jnp.isnan(padded_true).any())
 
         tL, bL = self._target_len, self._binder_len
-        rmsd_loss = _get_rmsd_loss(padded_true, pred, L=bL, include_L=False)["rmsd"]
+        rmsd_loss = _get_rmsd_loss(padded_true, pred, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
