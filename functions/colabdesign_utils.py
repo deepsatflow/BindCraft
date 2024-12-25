@@ -673,6 +673,10 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
     """Calculate fape loss from template structure"""
 
     def loss_fn(inputs, outputs):
+
+        print("info about output structure: ")
+        print(outputs.keys())
+
         # Get positions (219, 219, 3)
         positions = outputs["structure_module"]["final_atom_positions"]
 
