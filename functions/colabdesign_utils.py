@@ -705,7 +705,7 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
 def custom_dgram_loss(self, custom_inputs, weight=1.0):
     """Calculate dgram loss for custom structure"""
 
-    def dgram_loss(inputs, outputs):
+    def dgram_loss(inputs, outputs, aatype=None):
         batch = inputs["batch"]
         # gather features
         if aatype is None:
