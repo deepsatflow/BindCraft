@@ -111,8 +111,7 @@ def binder_hallucination(
     ### additional loss functions
     if advanced_settings["use_rg_loss"]:
         # radius of gyration loss
-        # add_rg_loss(af_model, advanced_settings["weights_rg"])
-        pass
+        add_rg_loss(af_model, advanced_settings["weights_rg"])
 
     if advanced_settings["use_i_ptm_loss"]:
         # interface pTM loss
@@ -120,15 +119,14 @@ def binder_hallucination(
 
     if advanced_settings["use_termini_distance_loss"]:
         # termini distance loss
-        # add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
-        pass
+        add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
 
     template_protein = prepare_inputs_for_loss("/root/bindcraft/target_A.pdb")
     custom_rmsd_loss(af_model, custom_inputs=template_protein)
     custom_fape_loss(af_model, custom_inputs=template_protein)
     custom_dgram_loss(af_model)
     # add the helicity loss
-    # add_helix_loss(af_model, helicity_value)
+    add_helix_loss(af_model, helicity_value)
 
     # calculate the number of mutations to do based on the length of the protein
     greedy_tries = math.ceil(length * (advanced_settings["greedy_percentage"] / 100))
