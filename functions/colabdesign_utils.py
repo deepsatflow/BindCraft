@@ -663,9 +663,9 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         pred = outputs["structure_module"]["final_atom_positions"][:, 1]
 
         print("input shape: ", inputs["batch"]["all_atom_positions"].shape)
-        # print(
-        #     "input shape selected: ", inputs["batch"]["all_atom_positions"][:, 1].shape
-        # )
+        print(
+            "input shape selected: ", inputs["batch"]["all_atom_positions"][:, 1].shape
+        )
         print("pred shape: ", pred.shape)
         print("true shape: ", true.shape)
 
@@ -675,10 +675,8 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         padded_true = jnp.zeros(pred_shape)
         # Copy the smaller matrix into the padded matrix
         padded_true = padded_true.at[: true.shape[0], :].set(true)
-        custom_inputs["batch"]["all_atom_positions"][:, 1] = padded_true
-
         tL, bL = self._target_len, self._binder_len
-        rmsd_loss = get_rmsd_loss(custom_inputs, outputs, L=bL, include_L=False)["rmsd"]
+        rmsd_loss = _get_rmsd_loss(padded_true, pred, L=bL, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
