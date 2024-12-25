@@ -662,15 +662,10 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         true = batch["all_atom_positions"][:, 1]
         pred = outputs["structure_module"]["final_atom_positions"][:, 1]
 
-        print("NaN in true:", jnp.isnan(true).any())
-
         pred_shape = pred.shape
         padded_true = jnp.zeros(pred_shape)
         start_idx = pred_shape[0] - true.shape[0]
-        print("start idx: ", start_idx)
         padded_true = padded_true.at[start_idx:, :].set(true)
-
-        print("NaN in padded true:", jnp.isnan(padded_true).any())
 
         tL, bL = self._target_len, self._binder_len
         rmsd_loss = _get_rmsd_loss(padded_true, pred, include_L=False)["rmsd"]
