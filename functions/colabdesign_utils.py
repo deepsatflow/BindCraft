@@ -673,11 +673,23 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
     """Calculate fape loss from template structure"""
 
     def loss_fn(inputs, outputs):
-        # batch = custom_inputs["batch"]
-        # true = batch["all_atom_positions"]
-        # pred = outputs["structure_module"]["final_atom_positions"]
+        # Get positions (219, 219, 3)
+        positions = outputs["structure_module"]["final_atom_positions"]
 
-        fape_loss = get_fape_loss(custom_inputs, outputs)
+        # Create mask and apply for first 50 residues
+        masked_positions = jnp.where(
+            jnp.arange(positions.shape[0])[:, None, None] < 50,
+            positions[:50, :50, :],
+            0.0,
+        )
+
+        # Create modified outputs with masked positions
+        modified_outputs = dict(outputs)
+        modified_outputs["structure_module"] = dict(outputs["structure_module"])
+        modified_outputs["structure_module"]["final_atom_positions"] = masked_positions
+
+        # Calculate FAPE loss with masked positions
+        fape_loss = get_fape_loss(custom_inputs, modified_outputs)
         return {"custom_fape": fape_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
