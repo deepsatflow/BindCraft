@@ -674,8 +674,24 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
 
     def loss_fn(inputs, outputs):
 
-        print("info about output structure: ")
-        print(outputs.keys())
+        print("info about output structure: ", outputs.keys())
+        print(type(outputs["distogram"]))
+        print(type(outputs["experimentally_resolved"]))
+        print(type(outputs["masked_msa"]))
+        print(type(outputs["predicted_aligned_error"]))
+        print(type(outputs["predicted_lddt"]))
+        print(type(outputs["prev"]))
+        print(type(outputs["representations"]))
+        print(type(outputs["structure_module"]))
+
+        print(outputs["distogram"])
+        print(outputs["experimentally_resolved"])
+        print(outputs["masked_msa"])
+        print(outputs["predicted_aligned_error"])
+        print(outputs["predicted_lddt"])
+        print(outputs["prev"])
+        print(outputs["representations"])
+        print(outputs["structure_module"])
 
         # Get positions (219, 219, 3)
         positions = outputs["structure_module"]["final_atom_positions"]
