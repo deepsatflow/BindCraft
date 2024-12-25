@@ -660,7 +660,6 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
     def loss_fn(inputs, outputs):
         batch = custom_inputs["batch"]
         true = batch["all_atom_positions"][:, 1]
-        # pred = outputs["structure_module"]["final_atom_positions"][:50, 1]
         pred = outputs["structure_module"]["final_atom_positions"][:, 1]
 
         print("input shape: ", inputs["batch"]["all_atom_positions"].shape)
@@ -669,8 +668,9 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         )
         print("pred shape: ", pred.shape)
         print("true shape: ", true.shape)
+        print("size of binder length: ", self._binder_len)
 
-        rmsd_loss = _get_rmsd_loss(true, pred, include_L=False)["rmsd"]
+        rmsd_loss = _get_rmsd_loss(true, pred, L=50, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
