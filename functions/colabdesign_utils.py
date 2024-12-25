@@ -653,7 +653,7 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
 
 # define other losses
-def custom_rmsd_loss(self, custom_inputs, weight=2.0):
+def custom_rmsd_loss(self, custom_inputs, weight=1.0):
     """Calculate losses for custom structure"""
 
     def loss_fn(inputs, outputs):
@@ -666,6 +666,21 @@ def custom_rmsd_loss(self, custom_inputs, weight=2.0):
 
     self._callbacks["model"]["loss"].append(loss_fn)
     self.opt["weights"]["custom_rmsd"] = weight
+
+
+def custom_fape_loss(self, custom_inputs, weight=1.0):
+    """Calculate fape loss from template structure"""
+
+    def loss_fn(inputs, outputs):
+        # batch = custom_inputs["batch"]
+        # true = batch["all_atom_positions"]
+        # pred = outputs["structure_module"]["final_atom_positions"]
+
+        fape_loss = get_fape_loss(custom_inputs, outputs)
+        return {"custom_fape": fape_loss}
+
+    self._callbacks["model"]["loss"].append(loss_fn)
+    self.opt["weights"]["custom_fape"] = weight
 
 
 # plot design trajectory losses
