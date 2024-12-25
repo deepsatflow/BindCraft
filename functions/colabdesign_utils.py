@@ -660,7 +660,10 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
     def loss_fn(inputs, outputs):
         batch = custom_inputs["batch"]
         true = batch["all_atom_positions"][:, 1]
-        pred = outputs["structure_module"]["final_atom_positions"][:50, 1]
+        # pred = outputs["structure_module"]["final_atom_positions"][:50, 1]
+        pred = outputs["structure_module"]["final_atom_positions"][:, 1]
+
+        print("pred shape: ", pred.shape)
 
         rmsd_loss = _get_rmsd_loss(true, pred, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
@@ -673,18 +676,6 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
     """Calculate fape loss from template structure"""
 
     def loss_fn(inputs, outputs):
-
-        print("info about output structure: ", outputs.keys())
-
-        print(outputs["distogram"].keys())
-        print(outputs["experimentally_resolved"].keys())
-        print(outputs["masked_msa"].keys())
-        print(outputs["predicted_aligned_error"].keys())
-        print(outputs["predicted_lddt"].keys())
-        print(outputs["prev"].keys())
-        print(outputs["representations"].keys())
-        print(outputs["structure_module"].keys())
-
         # Get positions (219, 219, 3)
         positions = outputs["structure_module"]["final_atom_positions"]
 
