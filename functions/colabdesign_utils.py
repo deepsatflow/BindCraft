@@ -20,6 +20,7 @@ from colabdesign.af.loss import (
     get_fape_loss,
     get_dgram_loss,
     _get_rmsd_loss,
+    _get_pw_loss,
 )
 from colabdesign.shared.utils import copy_dict
 from .biopython_utils import (
@@ -32,6 +33,7 @@ from .pyrosetta_utils import pr_relax, align_pdbs
 from .generic_utils import update_failures
 
 from colabdesign.af.prep import prep_pdb
+from colabdesign.af.alphafold.model import model, folding, all_atom
 
 
 # hallucinate a binder
@@ -703,11 +705,36 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
 def custom_dgram_loss(self, custom_inputs, weight=1.0):
     """Calculate dgram loss for custom structure"""
 
-    def loss_fn(inputs, outputs):
-        dgram_loss = get_dgram_loss(custom_inputs, outputs)
+    def dgram_loss(inputs, outputs):
+        batch = inputs["batch"]
+        # gather features
+        if aatype is None:
+            aatype = batch["aatype"]
+        pred = outputs["distogram"]["logits"]
+        print("pred shape", pred.shape)
+
+        # get true features
+        x, weights = model.modules.pseudo_beta_fn(
+            aatype=aatype,
+            all_atom_positions=batch["all_atom_positions"],
+            all_atom_mask=batch["all_atom_mask"],
+        )
+
+        dm = jnp.square(x[:, None] - x[None, :]).sum(-1, keepdims=True)
+        bin_edges = jnp.linspace(2.3125, 21.6875, pred.shape[-1] - 1)
+        true = jax.nn.one_hot((dm > jnp.square(bin_edges)).sum(-1), pred.shape[-1])
+
+        def loss_fn(t, p, m):
+            cce = -(t * jax.nn.log_softmax(p)).sum(-1)
+            return cce, (cce * m).sum((-1, -2)) / (m.sum((-1, -2)) + 1e-8)
+
+        weights = jnp.where(inputs["seq_mask"], weights, 0)
+        dgram_loss = _get_pw_loss(
+            true, pred, loss_fn, weights=weights, copies=1, return_mtx=False
+        )
         return {"custom_dgram": dgram_loss}
 
-    self._callbacks["model"]["loss"].append(loss_fn)
+    self._callbacks["model"]["loss"].append(dgram_loss)
     self.opt["weights"]["custom_dgram"] = weight
 
 
