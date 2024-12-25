@@ -653,6 +653,21 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
     return features
 
 
+def extract_traced_array(traced_array):
+    # Method 1: Using numpy()
+    concrete_array = traced_array.numpy()
+
+    # Method 2: Using jax.device_get()
+    import jax
+
+    concrete_array = jax.device_get(traced_array)
+
+    # Method 3: Using astype() if needed
+    float_array = concrete_array.astype("float32")
+
+    return float_array
+
+
 # define other losses
 def custom_rmsd_loss(self, custom_inputs, weight=1.0):
     """Calculate losses for custom structure"""
@@ -668,7 +683,9 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         # )
         print("pred shape: ", pred.shape)
         print("true shape: ", true.shape)
-        print("pred: ", pred)
+        concrete_value = extract_traced_array(pred)
+        print(f"Shape: {concrete_value.shape}")
+        print(f"Values: {concrete_value}")
 
         tL, bL = self._target_len, self._binder_len
 
