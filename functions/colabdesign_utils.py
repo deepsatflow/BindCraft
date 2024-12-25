@@ -665,6 +665,7 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         pred_shape = pred.shape
         padded_true = jnp.zeros(pred_shape)
         start_idx = pred_shape[0] - true.shape[0]
+        print("start idx: ", start_idx)
         padded_true = padded_true.at[start_idx:, :].set(true)
 
         tL, bL = self._target_len, self._binder_len
