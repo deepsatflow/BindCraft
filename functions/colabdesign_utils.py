@@ -664,6 +664,9 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         pred = outputs["structure_module"]["final_atom_positions"][:, 1]
 
         print("input shape: ", inputs["batch"]["all_atom_positions"].shape)
+        print(
+            "input shape selected: ", inputs["batch"]["all_atom_positions"][:, 1].shape
+        )
         print("pred shape: ", pred.shape)
         print("true shape: ", true.shape)
 
