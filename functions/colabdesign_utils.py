@@ -702,6 +702,7 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
 
 def custom_dgram_loss(self, custom_inputs, weight=1.0):
     """Calculate dgram loss for custom structure"""
+    tL, bL = self._target_len, self._binder_len
 
     def dgram_loss(inputs, outputs, aatype=None):
         batch = custom_inputs["batch"]
@@ -714,6 +715,7 @@ def custom_dgram_loss(self, custom_inputs, weight=1.0):
             all_atom_positions=batch["all_atom_positions"],
             all_atom_mask=batch["all_atom_mask"],
         )
+        pred = pred[-bL:, -bL:, :]
 
         dm = jnp.square(x[:, None] - x[None, :]).sum(-1, keepdims=True)
         bin_edges = jnp.linspace(2.3125, 21.6875, pred.shape[-1] - 1)
