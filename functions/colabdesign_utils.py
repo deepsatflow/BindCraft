@@ -657,7 +657,7 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
 
 # define other losses
-def custom_rmsd_loss(self, custom_inputs, weight=1.0):
+def custom_rmsd_loss(self, custom_inputs, weight=0.1):
     """Calculate losses for custom structure"""
 
     def loss_fn(inputs, outputs):
@@ -678,7 +678,7 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
     self.opt["weights"]["custom_rmsd"] = weight
 
 
-def custom_fape_loss(self, custom_inputs, weight=1.0):
+def custom_fape_loss(self, custom_inputs, weight=0.3):
     """Calculate fape loss from template structure"""
     tL, bL = self._target_len, self._binder_len
 
@@ -700,7 +700,7 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
     self.opt["weights"]["custom_fape"] = weight
 
 
-def custom_dgram_loss(self, weight=1.0):
+def custom_dgram_loss(self, weight=0.1):
     def loss_fn(inputs, outputs):
         dgram_loss = get_dgram_loss(inputs, outputs)
         return {"custom_dgram": dgram_loss}
