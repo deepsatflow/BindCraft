@@ -677,19 +677,21 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
 
 def custom_fape_loss(self, custom_inputs, weight=1.0):
     """Calculate fape loss from template structure"""
+    tL, bL = self._target_len, self._binder_len
 
     def loss_fn(inputs, outputs):
         positions = outputs["structure_module"]["final_atom_positions"]
+
         print("positions shape", positions.shape)
-        mask = jnp.zeros_like(positions[:50, :50, :])
-        mask = mask.at[:50, :50, :].set(1)
-        masked_positions = positions[:50, :50, :] * mask
+
+        mask = jnp.zeros_like(positions[tL:, :, :])
+        mask = mask.at[tL:, :, :].set(1)
+        masked_positions = positions[tL:, :, :] * mask
 
         modified_outputs = dict(outputs)
         modified_outputs["structure_module"] = dict(outputs["structure_module"])
         modified_outputs["structure_module"]["final_atom_positions"] = masked_positions
 
-        # Calculate FAPE loss with masked positions
         fape_loss = get_fape_loss(custom_inputs, modified_outputs)
         return {"custom_fape": fape_loss}
 
