@@ -653,24 +653,6 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
     return features
 
 
-def extract_traced_array(traced_array):
-    try:
-        import jax
-
-        # Method 1: Using device_get
-        concrete_array = jax.device_get(traced_array)
-
-        # Method 2: Using eval if device_get fails
-        if isinstance(traced_array, jax.core.Tracer):
-            concrete_array = traced_array.aval.val
-
-        return concrete_array
-    except Exception as e:
-        print(f"Error extracting array: {e}")
-        # Fallback: return original array
-        return traced_array
-
-
 # define other losses
 def custom_rmsd_loss(self, custom_inputs, weight=1.0):
     """Calculate losses for custom structure"""
@@ -686,13 +668,17 @@ def custom_rmsd_loss(self, custom_inputs, weight=1.0):
         # )
         print("pred shape: ", pred.shape)
         print("true shape: ", true.shape)
-        concrete_value = extract_traced_array(pred)
-        print(f"Shape: {concrete_value.shape}")
-        print(f"Values: {concrete_value}")
+
+        # Define the matrices
+        pred_shape = pred.shape
+        # Create a zero matrix with the target shape
+        padded_true = jnp.zeros(pred_shape)
+        # Copy the smaller matrix into the padded matrix
+        padded_true = padded_true.at[: true.shape[0], :].set(true)
 
         tL, bL = self._target_len, self._binder_len
 
-        rmsd_loss = _get_rmsd_loss(true, pred, L=bL, include_L=False)["rmsd"]
+        rmsd_loss = get_rmsd_loss(custom_inputs, outputs, L=bL, include_L=False)["rmsd"]
         return {"custom_rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
