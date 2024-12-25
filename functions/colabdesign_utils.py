@@ -685,8 +685,6 @@ def custom_fape_loss(self, custom_inputs, weight=1.0):
     def loss_fn(inputs, outputs):
         positions = outputs["structure_module"]["final_atom_positions"]
 
-        print("positions shape", positions.shape)
-
         mask = jnp.zeros_like(positions[tL:, :, :])
         mask = mask.at[tL:, :, :].set(1)
         masked_positions = positions[tL:, :, :] * mask
@@ -706,14 +704,11 @@ def custom_dgram_loss(self, custom_inputs, weight=1.0):
     """Calculate dgram loss for custom structure"""
 
     def dgram_loss(inputs, outputs, aatype=None):
-        batch = inputs["batch"]
-        # gather features
+        batch = custom_inputs["batch"]
         if aatype is None:
             aatype = batch["aatype"]
         pred = outputs["distogram"]["logits"]
-        print("pred shape", pred.shape)
 
-        # get true features
         x, weights = model.modules.pseudo_beta_fn(
             aatype=aatype,
             all_atom_positions=batch["all_atom_positions"],
