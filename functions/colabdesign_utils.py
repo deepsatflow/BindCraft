@@ -645,7 +645,7 @@ def add_termini_distance_loss(self, weight=0.1, threshold_distance=7.0):
     self.opt["weights"]["NC"] = weight
 
 
-def prepare_inputs_for_loss(pdb_filename, chain=None):
+def prepare_inputs_for_loss(pdb_filename, chain="A"):
     """Prepare inputs using existing prep_pdb function"""
 
     # Get features from prep_pdb
