@@ -699,12 +699,10 @@ def fape_loss(self, template_inputs, weight=0.3):
 
 def dgram_loss(self, template_inputs, weight=0.1):
     tL, bL = self._target_len, self._binder_len
-    aatype = template_inputs["batch"]["aatype"]
-    mask = template_inputs["seq_mask"]
 
     def loss_fn(inputs, outputs):
-
-        cce = get_dgram_loss(template_inputs, outputs, aatype=aatype, return_mtx=True)
+        cce = get_dgram_loss(inputs, outputs, return_mtx=True)
+        mask = inputs["seq_mask"]
         return {
             "dgram_cce": cce[-bL:].sum() / (mask[-bL:].sum() + 1e-8),
         }
