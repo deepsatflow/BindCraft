@@ -660,9 +660,7 @@ def rmsd_loss(self, template_inputs, weight=0.1):
     tL, bL = self._target_len, self._binder_len
 
     def loss_fn(inputs, outputs):
-        rmsd_loss = get_rmsd_loss(template_inputs, outputs, L=bL, include_L=False)[
-            "rmsd"
-        ]
+        rmsd_loss = get_rmsd_loss(template_inputs, outputs)["rmsd"]
         return {"rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
