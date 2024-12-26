@@ -121,7 +121,7 @@ def binder_hallucination(
         # termini distance loss
         add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
 
-    template_protein = prepare_inputs_for_loss("/root/bindcraft/target_A.pdb")
+    template_protein = prepare_inputs_for_loss("/root/bindcraft/template_structure.pdb")
     custom_rmsd_loss(af_model, custom_inputs=template_protein)
     custom_fape_loss(af_model, custom_inputs=template_protein)
     custom_dgram_loss(af_model)
