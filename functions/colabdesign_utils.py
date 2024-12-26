@@ -122,9 +122,9 @@ def binder_hallucination(
         add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
 
     template_protein = prepare_inputs_for_loss("/root/bindcraft/template_structure.pdb")
-    custom_rmsd_loss(af_model, custom_inputs=template_protein)
-    custom_fape_loss(af_model, custom_inputs=template_protein)
-    custom_dgram_loss(af_model)
+    rmsd_loss(af_model, template_inputs=template_protein)
+    fape_loss(af_model, template_inputs=template_protein)
+    dgram_loss(af_model, template_inputs=template_protein)
     # add the helicity loss
     add_helix_loss(af_model, helicity_value)
 
@@ -655,56 +655,47 @@ def prepare_inputs_for_loss(pdb_filename, chain=None):
 
 
 # define other losses
-def custom_rmsd_loss(self, custom_inputs, weight=0.1):
+def rmsd_loss(self, template_inputs, weight=0.1):
     """Calculate losses for custom structure"""
-
-    def loss_fn(inputs, outputs):
-        batch = custom_inputs["batch"]
-        true = batch["all_atom_positions"][:, 1]
-        pred = outputs["structure_module"]["final_atom_positions"][:, 1]
-
-        pred_shape = pred.shape
-        padded_true = jnp.zeros(pred_shape)
-        start_idx = pred_shape[0] - true.shape[0]
-        padded_true = padded_true.at[start_idx:, :].set(true)
-
-        tL, bL = self._target_len, self._binder_len
-        rmsd_loss = _get_rmsd_loss(padded_true, pred, include_L=False)["rmsd"]
-        return {"custom_rmsd": rmsd_loss}
-
-    self._callbacks["model"]["loss"].append(loss_fn)
-    self.opt["weights"]["custom_rmsd"] = weight
-
-
-def custom_fape_loss(self, custom_inputs, weight=0.3):
-    """Calculate fape loss from template structure"""
     tL, bL = self._target_len, self._binder_len
 
     def loss_fn(inputs, outputs):
-        positions = outputs["structure_module"]["final_atom_positions"]
-
-        mask = jnp.zeros_like(positions[tL:, :, :])
-        mask = mask.at[tL:, :, :].set(1)
-        masked_positions = positions[tL:, :, :] * mask
-
-        modified_outputs = dict(outputs)
-        modified_outputs["structure_module"] = dict(outputs["structure_module"])
-        modified_outputs["structure_module"]["final_atom_positions"] = masked_positions
-
-        fape_loss = get_fape_loss(custom_inputs, modified_outputs)
-        return {"custom_fape": fape_loss}
+        rmsd_loss = get_rmsd_loss(template_inputs, outputs, L=bL, include_L=False)[
+            "rmsd"
+        ]
+        return {"rmsd": rmsd_loss}
 
     self._callbacks["model"]["loss"].append(loss_fn)
-    self.opt["weights"]["custom_fape"] = weight
+    self.opt["weights"]["rmsd"] = weight
 
 
-def custom_dgram_loss(self, weight=0.1):
+def fape_loss(self, template_inputs, weight=0.3):
+    """Calculate fape loss from template structure"""
+    tL, bL = self._target_len, self._binder_len
+    mask = template_inputs["seq_mask"]
+
     def loss_fn(inputs, outputs):
-        dgram_loss = get_dgram_loss(inputs, outputs)
-        return {"custom_dgram": dgram_loss}
+        fape = get_fape_loss(template_inputs, outputs, return_mtx=True)
+        return {"fape": fape[-bL:].sum() / (mask[-bL:].sum() + 1e-8)}
 
     self._callbacks["model"]["loss"].append(loss_fn)
-    self.opt["weights"]["custom_dgram"] = weight
+    self.opt["weights"]["fape"] = weight
+
+
+def dgram_loss(self, template_inputs, weight=0.1):
+    tL, bL = self._target_len, self._binder_len
+    aatype = template_inputs["aatype"]
+    mask = template_inputs["seq_mask"]
+
+    def loss_fn(inputs, outputs):
+
+        cce = get_dgram_loss(template_inputs, outputs, aatype=aatype, return_mtx=True)
+        return {
+            "dgram_cce": cce[-bL:].sum() / (mask[-bL:].sum() + 1e-8),
+        }
+
+    self._callbacks["model"]["loss"].append(loss_fn)
+    self.opt["weights"]["dgram_cce"] = weight
 
 
 # plot design trajectory losses
