@@ -660,8 +660,17 @@ def rmsd_loss(self, template_inputs, weight=0.1):
     tL, bL = self._target_len, self._binder_len
 
     def loss_fn(inputs, outputs):
-        rmsd_loss = get_rmsd_loss(template_inputs, outputs, include_L=False)["rmsd"]
-        return {"rmsd": rmsd_loss}
+        batch = template_inputs["batch"]
+        true = batch["all_atom_positions"][:, 1]
+        pred = outputs["structure_module"]["final_atom_positions"][:, 1]
+
+        pred_shape = pred.shape
+        padded_true = jnp.zeros(pred_shape)
+        start_idx = pred_shape[0] - true.shape[0]
+        padded_true = padded_true.at[start_idx:, :].set(true)
+        rmsd = _get_rmsd_loss(padded_true, pred, include_L=False)["rmsd"]
+
+        return {"rmsd": rmsd}
 
     self._callbacks["model"]["loss"].append(loss_fn)
     self.opt["weights"]["rmsd"] = weight
@@ -670,11 +679,19 @@ def rmsd_loss(self, template_inputs, weight=0.1):
 def fape_loss(self, template_inputs, weight=0.3):
     """Calculate fape loss from template structure"""
     tL, bL = self._target_len, self._binder_len
-    mask = template_inputs["seq_mask"]
 
     def loss_fn(inputs, outputs):
-        fape = get_fape_loss(template_inputs, outputs, return_mtx=True)
-        return {"fape": fape[-bL:].sum() / (mask[-bL:].sum() + 1e-8)}
+        positions = outputs["structure_module"]["final_atom_positions"]
+        mask = jnp.zeros_like(positions[tL:, :, :])
+        mask = mask.at[tL:, :, :].set(1)
+        masked_positions = positions[tL:, :, :] * mask
+
+        modified_outputs = dict(outputs)
+        modified_outputs["structure_module"] = dict(outputs["structure_module"])
+        modified_outputs["structure_module"]["final_atom_positions"] = masked_positions
+
+        fape = get_fape_loss(template_inputs, modified_outputs)
+        return {"fape": fape}
 
     self._callbacks["model"]["loss"].append(loss_fn)
     self.opt["weights"]["fape"] = weight
