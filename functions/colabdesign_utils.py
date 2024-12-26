@@ -666,8 +666,7 @@ def rmsd_loss(self, template_inputs, weight=0.1):
 
         pred_shape = pred.shape
         padded_true = jnp.zeros(pred_shape)
-        start_idx = pred_shape[0] - true.shape[0]
-        padded_true = padded_true.at[start_idx:, :].set(true)
+        padded_true = padded_true.at[tL:, :].set(true)
         rmsd = _get_rmsd_loss(padded_true, pred, include_L=False)["rmsd"]
 
         return {"rmsd": rmsd}
@@ -698,17 +697,14 @@ def fape_loss(self, template_inputs, weight=0.3):
 
 
 def dgram_loss(self, template_inputs, weight=0.1):
-    tL, bL = self._target_len, self._binder_len
+    """Calculate dgram loss from input structure"""
 
     def loss_fn(inputs, outputs):
-        cce = get_dgram_loss(inputs, outputs, return_mtx=True)
-        mask = inputs["seq_mask"]
-        return {
-            "dgram_cce": cce[-bL:].sum() / (mask[-bL:].sum() + 1e-8),
-        }
+        dgram = get_dgram_loss(inputs, outputs)
+        return {"dgram": dgram}
 
     self._callbacks["model"]["loss"].append(loss_fn)
-    self.opt["weights"]["dgram_cce"] = weight
+    self.opt["weights"]["dgram"] = weight
 
 
 # plot design trajectory losses
