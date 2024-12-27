@@ -121,12 +121,12 @@ def binder_hallucination(
         # termini distance loss
         add_termini_distance_loss(af_model, advanced_settings["weights_termini_loss"])
 
-    template_protein = prepare_inputs_for_loss("/root/bindcraft/template_structure.pdb")
-    rmsd_loss(af_model, template_inputs=template_protein)
-    fape_loss(af_model, template_inputs=template_protein)
-    dgram_loss(af_model, template_inputs=template_protein)
-    # # add the helicity loss
-    # add_helix_loss(af_model, helicity_value)
+    # template_protein = prepare_inputs_for_loss("/root/bindcraft/template_structure.pdb")
+    # rmsd_loss(af_model, template_inputs=template_protein)
+    # fape_loss(af_model, template_inputs=template_protein)
+    # dgram_loss(af_model, template_inputs=template_protein)
+    # add the helicity loss
+    add_helix_loss(af_model, helicity_value)
 
     # calculate the number of mutations to do based on the length of the protein
     greedy_tries = math.ceil(length * (advanced_settings["greedy_percentage"] / 100))
