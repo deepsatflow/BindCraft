@@ -125,8 +125,8 @@ def binder_hallucination(
     rmsd_loss(af_model, template_inputs=template_protein)
     fape_loss(af_model, template_inputs=template_protein)
     dgram_loss(af_model, template_inputs=template_protein)
-    # add the helicity loss
-    add_helix_loss(af_model, helicity_value)
+    # # add the helicity loss
+    # add_helix_loss(af_model, helicity_value)
 
     # calculate the number of mutations to do based on the length of the protein
     greedy_tries = math.ceil(length * (advanced_settings["greedy_percentage"] / 100))
