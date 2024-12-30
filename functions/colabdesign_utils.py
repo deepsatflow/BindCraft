@@ -71,7 +71,7 @@ def binder_hallucination(
 
     af_model.prep_inputs(
         pdb_filename=starting_pdb,
-        chain="A,B",
+        chain="A",
         # binder_len=length,
         # hotspot=target_hotspot_residues,
         binder_chain="B",
