@@ -72,8 +72,9 @@ def binder_hallucination(
     af_model.prep_inputs(
         pdb_filename=starting_pdb,
         chain=chain,
-        binder_len=length,
-        hotspot=target_hotspot_residues,
+        # binder_len=length,
+        # hotspot=target_hotspot_residues,
+        binder_chain="B",
         seed=seed,
         rm_aa=advanced_settings["omit_AAs"],
         rm_target_seq=advanced_settings["rm_template_seq_design"],
