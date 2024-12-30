@@ -58,7 +58,7 @@ def binder_hallucination(
     # initialise binder hallucination model
     af_model = mk_afdesign_model(
         protocol="binder",
-        debug=False,
+        debug=True,
         data_dir=advanced_settings["af_params_dir"],
         use_multimer=advanced_settings["use_multimer_design"],
         num_recycles=advanced_settings["num_recycles_design"],
@@ -71,7 +71,7 @@ def binder_hallucination(
 
     af_model.prep_inputs(
         pdb_filename=starting_pdb,
-        chain=chain,
+        chain="A",
         # binder_len=length,
         # hotspot=target_hotspot_residues,
         binder_chain="B",
